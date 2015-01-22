@@ -346,6 +346,117 @@ By default, :ref:`commands#test_checks` tests all existing checks. When
 against.
 
 
+.. _commands#vfolders:
+
+Virtual Folders
+---------------
+
+These commands allow you to perform tasks with virtual folders from the command
+line.
+
+
+.. _commands#add-virtual-folders:
+
+add_vfolders
+^^^^^^^^^^^^
+
+.. versionadded:: 2.7.0
+
+This command allows you to create **virtual folders** from a JSON file. If the
+specified virtual folders already exist and the data differs, then they are
+updated with the provided data.
+
+The JSON file consists in a list of virtual folder definitions with the
+following fields:
+
+- A mandatory lowercase name for the virtual folder,
+- A mandatory location in Pootle for the virtual folder that can use
+  placeholders for language (``{LANG}``) and project (``{PROJ}``),
+- An optional integer priority for the virtual folder, being 1 the default
+  priority, where higher numbers means higher priority,
+- An optional ``true`` or ``false`` indicating if the virtual folder is browsable
+  (defaults to ``false``),
+- An optional description that can include newlines (that must be escaped).
+- An optional list with the files the virtual folder applies to. Every item is
+  the relative path to the virtual folder location for each file.
+
+The following example depicts a basic JSON file:
+
+.. code-block:: json
+
+    [
+        {
+            "name": "user1",
+            "location": "/{LANG}/firefox/browser/",
+            "priority": 1,
+            "is_browsable": true,
+            "description": "Most visible strings for the user.",
+            "files": [
+                "branding/official/brand.dtd.po",
+                "chrome/browser/aboutDialog.dtd.po"
+            ]
+        },
+        {
+            "name": "user2",
+            "location": "/gl/firefox/",
+            "priority": 2,
+            "is_browsable": false,
+            "files": [
+                "browser/chrome/browser/aboutSessionRestore.dtd.po",
+                "browser/chrome/browser/downloads/downloads.dtd.po"
+            ]
+        },
+        {
+            "name": "user3",
+            "location": "/ru/{PROJ}/",
+            "priority": 7,
+            "files": [
+                "browser/chrome/browser/engineManager.dtd.po"
+            ]
+        },
+        {
+            "name": "default",
+            "location": "/"
+        },
+        {
+            "name": "other",
+            "location": "/af/firefox/",
+            "is_browsable": true,
+            "files": [
+                "browser/chrome/browser/aboutCertError.dtd.po"
+            ]
+        },
+        {
+            "name": "developer",
+            "location": "/af/firefox/",
+            "priority": 9,
+            "description": "As you can see this\\n description spans\\n several lines.",
+            "files": [
+                "browser/chrome/browser/devtools/appcacheutils.properties.po",
+                "browser/chrome/browser/devtools/debugger.dtd.po"
+            ]
+        },
+        {
+            "name": "install",
+            "location": "/ru/{PROJ}/",
+            "priority": 5,
+            "is_browsable": true,
+            "description": "Installation related strings.",
+            "files": [
+                "browser/chrome/browser/migration/migration.dtd.po",
+                "browser/chrome/browser/migration/migration.properties.po"
+            ]
+        }
+    ]
+
+
+This command has one mandatory :option:`--filename` option.
+
+.. code-block:: bash
+
+    $ pootle add_vfolders --filename=virtual_folders.json
+
+
 .. _commands#manually_installing_pootle:
 
 Manually Installing Pootle
