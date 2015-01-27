@@ -24,6 +24,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from pootle.core.markup import get_markup_filter_name, MarkupField
+from pootle_store.models import Store
 
 
 def pattern_for_path(pootle_path):
@@ -142,3 +143,57 @@ class VirtualFolder(models.Model):
         # https://docs.djangoproject.com/en/1.7/ref/models/querysets/#regex
         return [vf for vf in VirtualFolder.objects.filter(is_browsable=True)
                 if vf_re.match(vf.location)]
+
+    @classmethod
+    def get_matching_for(cls, pootle_path):
+        """Return the matching virtual folders in the given pootle path.
+
+        Not all the applicable virtual folders have matching filtering rules.
+        This method further restricts the list of applicable virtual folders to
+        retrieve only those with filtering rules that actually match.
+        """
+        matching = []
+        for vf in cls.get_applicable_for(pootle_path):
+            # Adjust virtual folder location for current pootle path.
+            location = vf.get_adjusted_location(pootle_path)
+
+            # Iterate over each file in the filtering rules to see if matches.
+            for filename in vf.filter_rules.split(","):
+                vf_file = "/".join([location, filename])
+
+                if (vf_file.startswith(pootle_path) and
+                    Store.objects.filter(pootle_path=vf_file).exists()):
+
+                    matching.append(vf)
+                    break
+
+        return matching
+
+    def get_adjusted_location(self, pootle_path):
+        """Return the virtual folder location adjusted to the given path.
+
+        The virtual folder location might have placeholders, which affect the
+        actual filenames since those have to be concatenated to the virtual
+        folder location.
+        """
+        count = self.location.count("/")
+
+        if pootle_path.count("/") < count:
+            raise Exception("%s is not applicable in %s" % (self, pootle_path))
+
+        pootle_path_parts = pootle_path.strip("/").split("/")
+        location_parts = self.location.strip("/").split("/")
+
+        try:
+            if (location_parts[0] != pootle_path_parts[0] and
+                location_parts[0] != "{LANG}"):
+                raise Exception("%s is not applicable in %s" % (self,
+                                                                pootle_path))
+            elif (location_parts[1] != pootle_path_parts[1] and
+                  location_parts[1] != "{PROJ}"):
+                raise Exception("%s is not applicable in %s" % (self,
+                                                                pootle_path))
+        except IndexError:
+            pass
+
+        return "/".join(pootle_path.split("/")[:count])
