@@ -32,6 +32,7 @@ var stats = {
   init: function (options) {
     this.retries = 0;
     this.pootlePath = options.pootlePath;
+    this.vFolder = options.vFolder;//TODO when drilling down this is necessary to actually filter the contents and stats?
     this.processLoadedData(options.data, undefined, true);
 
     $('td.stats-name').filter(':not([dir])').bidi();
@@ -230,7 +231,8 @@ var stats = {
   load: function (callback) {
     var url = l('/xhr/stats/overview/'),
         reqData = {
-          path: this.pootlePath
+          path: this.pootlePath,
+          vfolder: this.vFolder
         };
 
     $.ajax({

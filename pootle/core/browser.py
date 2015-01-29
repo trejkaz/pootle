@@ -21,12 +21,19 @@
 
 from django.utils.translation import ugettext_lazy as _
 
+from virtualfolder.models import VirtualFolder
+
 
 HEADING_CHOICES = [
     {
         'id': 'name',
         'class': 'stats',
         'display_name': _("Name"),
+    },
+    {
+        'id': 'priority',
+        'class': 'stats-number sorttable_numeric',
+        'display_name': _("Priority"),
     },
     {
         'id': 'project',
@@ -185,3 +192,28 @@ def get_children(directory):
               for child_store in directory.child_stores.iterator()]
 
     return directories + stores
+
+
+def make_vfolder_item(virtual_folder, directory):
+    return {
+        #'href': virtual_folder.get_drill_down_url(directory.pootle_path),#TODO in a specific ppath
+#        'href_all': virtual_folder.get_translate_url(directory.pootle_path),
+        #'href_todo': virtual_folder.get_translate_url(state='incomplete'),
+        #'href_sugg': virtual_folder.get_translate_url(state='suggestions'),
+        #'href_critical': virtual_folder.get_critical_url(),
+        'title': virtual_folder.name,
+        'code': virtual_folder.code,
+        'priority': virtual_folder.priority,
+        'is_disabled': getattr(virtual_folder, 'disabled', False),
+        'icon': 'folder',
+    }
+
+
+def get_vfolders(directory):
+    """Return a list of virtual folders for this ``directory``.
+
+    The elements of the list are dictionaries which keys are populated after
+    in the templates.
+    """
+    return [make_vfolder_item(vf, directory)
+            for vf in VirtualFolder.get_matching_for(directory.pootle_path)]

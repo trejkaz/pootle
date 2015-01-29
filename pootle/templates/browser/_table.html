@@ -31,6 +31,12 @@
       </td>
       {% endif %}
 
+      {% if 'priority' in table.fields %}
+      <td id="priority-{{ item.code }}" class="stats-number total">
+        <span class="zero">{{ item.priority }}</span>
+      </td>
+      {% endif %}
+
       {% if 'progress' in table.fields %}
       <td class="stats-graph">
         <div id="translated-ratio-{{ item.code }}" class="sortkey"></div>

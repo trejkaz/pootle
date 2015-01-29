@@ -25,7 +25,8 @@ from urllib import quote, unquote
 from django.shortcuts import render
 from django.utils import dateformat
 
-from pootle.core.browser import get_children, get_table_headings, get_parent
+from pootle.core.browser import (get_children, get_table_headings, get_parent,
+                                 get_vfolders)
 from pootle.core.decorators import (get_path_obj, get_resource,
                                     permission_required)
 from pootle.core.helpers import (get_export_view_context,
@@ -123,6 +124,21 @@ def overview(request, translation_project, dir_path, filename=None):
                 'items': get_children(directory),
             }
         })
+
+        vfolders = get_vfolders(directory)
+        if len(vfolders) > 0:
+            table_fields = ['name', 'priority', 'progress', 'total',
+                            'need-translation', 'suggestions', 'critical',
+                            'activity']
+            ctx.update({
+                'vfolders': {
+                    'id': 'tp',
+                    'fields': table_fields,
+                    'headings': get_table_headings(table_fields),
+                    'items': get_vfolders(directory),
+                },
+                #'current_vfolder': current_vfolder,#TODO provide current vf when drilling down.
+            })
 
     response = render(request, 'browser/overview.html', ctx)
 

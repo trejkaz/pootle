@@ -96,6 +96,12 @@
   <a href="#" class="js-stats-refresh">{% trans "Refresh now" %}</a>
 </div>
 
+{% if vfolders %}
+<div class="bd vfolders" lang="{{ LANGUAGE_CODE }}">
+  {% display_table vfolders %}
+</div>
+{% endif %}
+
 {% if table %}
 <div class="bd" lang="{{ LANGUAGE_CODE }}">
   {% display_table table %}
@@ -111,6 +117,7 @@ $(function () {
   PTL.search.init();
   PTL.stats.init({
     pootlePath: "{{ pootle_path }}",
+    vFolder: "{{ current_vfolder }}",
     data: {{ stats|safe }}
   });
 

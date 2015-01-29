@@ -2060,6 +2060,10 @@ table.stats .item.dirty .last-updated
     color: #606047;
 }
 
+.vfolders{
+     margin-bottom: 3em;
+}
+
 /* FIX FOR HEADING SIZES */
 
 h2:lang(bn),
