@@ -1,0 +1,143 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright 2009 Zuza Software Foundation
+# Copyright 2014 Evernote Corporation
+#
+# This file is part of Pootle.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
+
+import os
+os.environ["DJANGO_SETTINGS_MODULE"] = "pootle.settings"
+from optparse import make_option
+from zipfile import ZipFile
+from django.core.management.base import CommandError
+
+from pootle_language.models import Language
+from pootle_project.models import Project
+from pootle_store.models import Store
+from pootle_app.management.commands import PootleCommand
+from translate.storage import po
+
+class Command(PootleCommand):
+    option_list = PootleCommand.option_list + (
+        make_option("--path", action="store", dest="pootle_path",
+                    help="Export a single file"),
+        )
+    help = "Export a Project, Translation Project, or path. Multiple files will be zipped."
+
+
+    def _export_store(self, store):
+        self.stdout.write("Parsing %r\n" % (store))
+        out = store.serialize()
+        # Parse the serialized store so we can find the pootle path
+        r = po.pofile(out)
+        pootle_path = r.parseheader().get("X-Pootle-Path")
+        assert pootle_path
+        return pootle_path, out
+
+    def _create_zip(self, files, prefix):
+        with open("%s.zip" % (prefix), "wb") as f:
+            with ZipFile(f, "w") as zf:
+                for path, contents in files.items():
+                    zf.writestr(prefix + path, contents)
+        self.stdout.write("Created %s\n" % (f.name))
+
+    def handle_all(self, **options):
+        project_query = Project.objects.all()
+
+        if self.projects:
+            project_query = project_query.filter(code__in=self.projects)
+
+        path = options.get("pootle_path")
+        if path:
+            try:
+                store = Store.objects.get(pootle_path=path)
+            except Store.DoesNotExist as e:
+                raise CommandError("Could not find store matching %r" % (path))
+            self.handle_store(store, **options)
+            return
+
+        # Export a whole directory
+        directory = options.pop("directory")
+        if directory:
+            self.handle_directory(directory, **options)
+            return
+
+        # support exporting an entire project
+        if self.projects and not self.languages:
+            for project in project_query:
+                self.handle_project(project, **options)
+                return
+
+        # Support exporting an entire language
+        if self.languages and not self.projects:
+            for language in Language.objects.filter(code__in=self.languages):
+                self.handle_language(language, **options)
+                return
+
+        for project in project_query.iterator():
+            tp_query = project.translationproject_set \
+                              .order_by("language__code")
+
+            if self.languages:
+                tp_query = tp_query.filter(language__code__in=self.languages)
+
+            for tp in tp_query.iterator():
+                self.do_translation_project(tp, self.path, **options)
+
+    def handle_translation_project(self, translation_project, **options):
+        zip_contents = {}
+        for store in translation_project.stores.all():
+            path, contents = self._export_store(store)
+            zip_contents[path] = contents
+        prefix = "%s-%s" % (translation_project.project.code, translation_project.language.code)
+        self._create_zip(zip_contents, prefix)
+
+    def handle_project(self, project, **options):
+        zip_contents = {}
+        stores = Store.objects.filter(translation_project__project=project)
+        if not stores:
+            raise CommandError("No matches for %r" % (project))
+        for store in stores:
+            path, contents = self._export_store(store)
+            zip_contents[path] = contents
+        self._create_zip(zip_contents, prefix=project.code)
+
+    def handle_language(self, language, **options):
+        zip_contents = {}
+        for store in Store.objects.filter(translation_project__language=language):
+            path, contents = self._export_store(store)
+            zip_contents[path] = contents
+        self._create_zip(zip_contents, prefix=language.code)
+
+    def handle_directory(self, directory, **options):
+        stores = Store.objects.filter(pootle_path__startswith=directory)
+        if not stores:
+            raise CommandError("No matches for %r" % (directory))
+        zip_contents = {}
+        for store in stores:
+            path, contents = self._export_store(store)
+            zip_contents[path] = contents
+        prefix = directory.strip("/").replace("/", "-")
+        if not prefix:
+            prefix = "export"
+        self._create_zip(zip_contents, prefix=prefix)
+
+    def handle_store(self, store, **options):
+        path, contents = self._export_store(store)
+        with open(os.path.basename(path), "wb") as f:
+            f.write(contents)
+        self.stdout.write("Created %r" % (f.name))
