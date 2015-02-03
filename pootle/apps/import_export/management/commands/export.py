@@ -48,11 +48,13 @@ class Command(PootleCommand):
         assert pootle_path
         return pootle_path, out
 
-    def _create_zip(self, files, prefix):
+    def _create_zip(self, stores, prefix):
         with open("%s.zip" % (prefix), "wb") as f:
             with ZipFile(f, "w") as zf:
-                for path, contents in files.items():
+                for store in stores:
+                    path, contents = self._export_store(store)
                     zf.writestr(prefix + path, contents)
+
         self.stdout.write("Created %s\n" % (f.name))
 
     def handle_all(self, **options):
@@ -99,42 +101,28 @@ class Command(PootleCommand):
                 self.do_translation_project(tp, self.path, **options)
 
     def handle_translation_project(self, translation_project, **options):
-        zip_contents = {}
-        for store in translation_project.stores.all():
-            path, contents = self._export_store(store)
-            zip_contents[path] = contents
+        stores = translation_project.stores.all()
         prefix = "%s-%s" % (translation_project.project.code, translation_project.language.code)
-        self._create_zip(zip_contents, prefix)
+        self._create_zip(stores, prefix)
 
     def handle_project(self, project, **options):
-        zip_contents = {}
         stores = Store.objects.filter(translation_project__project=project)
         if not stores:
-            raise CommandError("No matches for %r" % (project))
-        for store in stores:
-            path, contents = self._export_store(store)
-            zip_contents[path] = contents
-        self._create_zip(zip_contents, prefix=project.code)
+            raise CommandError("No matches for project %r" % (project))
+        self._create_zip(stores, prefix=project.code)
 
     def handle_language(self, language, **options):
-        zip_contents = {}
-        for store in Store.objects.filter(translation_project__language=language):
-            path, contents = self._export_store(store)
-            zip_contents[path] = contents
-        self._create_zip(zip_contents, prefix=language.code)
+        stores = Store.objects.filter(translation_project__language=language)
+        self._create_zip(stores, prefix=language.code)
 
     def handle_directory(self, directory, **options):
         stores = Store.objects.filter(pootle_path__startswith=directory)
         if not stores:
-            raise CommandError("No matches for %r" % (directory))
-        zip_contents = {}
-        for store in stores:
-            path, contents = self._export_store(store)
-            zip_contents[path] = contents
+            raise CommandError("No matches for path %r" % (directory))
         prefix = directory.strip("/").replace("/", "-")
         if not prefix:
             prefix = "export"
-        self._create_zip(zip_contents, prefix=prefix)
+        self._create_zip(stores, prefix=prefix)
 
     def handle_store(self, store, **options):
         path, contents = self._export_store(store)
