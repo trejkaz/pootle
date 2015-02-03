@@ -51,7 +51,9 @@ def export(request):
 
     # zip all the stores together
     f = BytesIO()
-    prefix = "export"
+    prefix = path.strip("/").replace("/", "-")
+    if not prefix:
+        prefix = "export"
     with BytesIO() as f:
         with ZipFile(f, "w") as zf:
             for store in stores:
