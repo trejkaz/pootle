@@ -39,21 +39,11 @@ class Command(PootleCommand):
     help = "Export a Project, Translation Project, or path. Multiple files will be zipped."
 
 
-    def _export_store(self, store):
-        self.stdout.write("Parsing %r\n" % (store))
-        out = store.serialize()
-        # Parse the serialized store so we can find the pootle path
-        r = po.pofile(out)
-        pootle_path = r.parseheader().get("X-Pootle-Path")
-        assert pootle_path
-        return pootle_path, out
-
     def _create_zip(self, stores, prefix):
         with open("%s.zip" % (prefix), "wb") as f:
             with ZipFile(f, "w") as zf:
                 for store in stores:
-                    path, contents = self._export_store(store)
-                    zf.writestr(prefix + path, contents)
+                    zf.writestr(prefix + store.pootle_path, store.serialize())
 
         self.stdout.write("Created %s\n" % (f.name))
 
@@ -125,7 +115,6 @@ class Command(PootleCommand):
         self._create_zip(stores, prefix=prefix)
 
     def handle_store(self, store, **options):
-        path, contents = self._export_store(store)
-        with open(os.path.basename(path), "wb") as f:
-            f.write(contents)
+        with open(os.path.basename(store.pootle_path), "wb") as f:
+            f.write(store.serialize())
         self.stdout.write("Created %r" % (f.name))
