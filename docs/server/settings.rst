@@ -273,6 +273,14 @@ Configuration settings for applications used by Pootle.
   Enable spam prevention through a captcha.
 
 
+.. setting:: POOTLE_ENABLE_OFFLINE
+
+``POOTLE_ENABLE_OFFLINE``
+  Default: ``False``
+
+  Enable Pootle offline translation support.
+
+
 60-translation.conf
 ^^^^^^^^^^^^^^^^^^^
 

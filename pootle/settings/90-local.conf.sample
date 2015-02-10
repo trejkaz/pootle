@@ -280,3 +280,11 @@ WORDCOUNT_FUNC = 'translate.storage.statsdb.wordcount'
 
 # path to quality checker
 QUALITY_CHECKER = ''
+
+
+#
+# Offline translation support
+#
+
+# Set this to True to enable the Pootle offline translation support.
+POOTLE_ENABLE_OFFLINE = False
