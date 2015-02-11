@@ -102,7 +102,10 @@ def overview(request, translation_project, dir_path, filename=None):
     ctx = get_overview_context(request)
 
     if settings.POOTLE_ENABLE_OFFLINE and request.user.is_authenticated():
+        from import_export.views import handle_upload_form
         from pootle_app.models.permissions import check_permission
+
+        ctx.update(handle_upload_form(request))
 
         if (check_permission("translate", request) or
             check_permission("suggest", request)):
