@@ -55,30 +55,19 @@ class Command(PootleCommand):
 
         path = options.get("pootle_path")
         if path:
-            try:
-                store = Store.objects.get(pootle_path=path)
-            except Store.DoesNotExist as e:
-                raise CommandError("Could not find store matching %r" % (path))
-            self.handle_store(store, **options)
-            return
-
-        # Export a whole directory
-        directory = options.pop("directory")
-        if directory:
-            self.handle_directory(directory, **options)
-            return
+            return self.handle_path(path, **options)
 
         # support exporting an entire project
         if self.projects and not self.languages:
             for project in project_query:
                 self.handle_project(project, **options)
-                return
+            return
 
         # Support exporting an entire language
         if self.languages and not self.projects:
             for language in Language.objects.filter(code__in=self.languages):
                 self.handle_language(language, **options)
-                return
+            return
 
         for project in project_query.iterator():
             tp_query = project.translationproject_set \
@@ -105,16 +94,21 @@ class Command(PootleCommand):
         stores = Store.objects.filter(translation_project__language=language)
         self._create_zip(stores, prefix=language.code)
 
-    def handle_directory(self, directory, **options):
-        stores = Store.objects.filter(pootle_path__startswith=directory)
+    def handle_path(self, path, **options):
+        stores = Store.objects.filter(pootle_path__startswith=path)
         if not stores:
-            raise CommandError("No matches for path %r" % (directory))
-        prefix = directory.strip("/").replace("/", "-")
+            raise CommandError("Could not find store matching %r" % (path))
+
+        if stores.count() == 1:
+            store = stores.get()
+            with open(os.path.basename(store.pootle_path), "wb") as f:
+                f.write(store.serialize())
+
+            self.stdout.write("Created %r" % (f.name))
+            return
+
+        prefix = path.strip("/").replace("/", "-")
         if not prefix:
             prefix = "export"
-        self._create_zip(stores, prefix=prefix)
 
-    def handle_store(self, store, **options):
-        with open(os.path.basename(store.pootle_path), "wb") as f:
-            f.write(store.serialize())
-        self.stdout.write("Created %r" % (f.name))
+        self._create_zip(stores, prefix)
