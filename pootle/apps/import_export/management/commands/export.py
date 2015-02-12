@@ -29,7 +29,7 @@ from pootle_language.models import Language
 from pootle_project.models import Project
 from pootle_store.models import Store
 from pootle_app.management.commands import PootleCommand
-from translate.storage import po
+
 
 class Command(PootleCommand):
     option_list = PootleCommand.option_list + (

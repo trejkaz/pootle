@@ -29,7 +29,6 @@ from pootle_language.models import Language
 from pootle_project.models import Project
 from pootle_store.models import Store
 from import_export.views import _import_file
-from translate.storage import po
 
 
 class Command(BaseCommand):
