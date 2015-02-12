@@ -72,7 +72,7 @@ def _import_file(file):
     try:
         store, created = Store.objects.get_or_create(pootle_path=pootle_path)
     except Exception as e:
-        raise ValueError("Could not import %r. Bad X-Pootle-Path? (%s)" % (file.name, e))
+        raise ValueError("Could not create %r. Missing Project/Language? (%s)" % (file.name, e))
 
     store.update(store=pofile)
 
