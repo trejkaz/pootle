@@ -75,18 +75,6 @@ def test_lxml():
         return None, None
 
 
-def test_redis_server_available():
-    from django_rq.queues import get_queue
-    from django_rq.workers import Worker
-    from redis.exceptions import ConnectionError
-    queue = get_queue()
-    try:
-        workers = Worker.all(queue.connection)
-        return True, queue.connection.connection_pool.connection_kwargs
-    except ConnectionError:
-        return False, queue.connection.connection_pool.connection_kwargs
-
-
 def test_redis_server_version():
     from django_rq.queues import get_queue
     queue = get_queue()
@@ -96,14 +84,6 @@ def test_redis_server_version():
         return True, redis_version_string
     else:
         return False, redis_version_string
-
-
-def test_rq_workers_running():
-    from django_rq.queues import get_queue
-    from django_rq.workers import Worker
-    queue = get_queue()
-    workers = Worker.all(queue.connection)
-    return len(workers) >= 1 and not workers[0].stopped, len(workers)
 
 
 def test_cache():
