@@ -24,7 +24,9 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from pootle.core.markup import get_markup_filter_name, MarkupField
-from pootle_store.models import Store
+from pootle_language.models import Language
+from pootle_project.models import Project
+from pootle_store.models import Store, Unit
 
 
 def pattern_for_path(pootle_path):
@@ -115,6 +117,11 @@ class VirtualFolder(models.Model):
         help_text=_('Use this to provide more information or instructions. '
                     'Allowed markup: %s', get_markup_filter_name()),
     )
+    units = models.ManyToManyField(
+        Unit,
+        db_index=True,
+        related_name='vfolders',
+    )
 
     class Meta:
         unique_together = ('name', 'location')
@@ -122,6 +129,23 @@ class VirtualFolder(models.Model):
 
     def __unicode__(self):
         return ": ".join([self.name, self.location])
+
+    def save(self, *args, **kwargs):
+        super(VirtualFolder, self).save(*args, **kwargs)
+
+        # Clean any existing relationship between units and this vfolder.
+        self.units.clear()
+
+        if self.is_browsable:
+            # Recreate relationships between this vfolder and units.
+            for location in self.get_all_pootle_paths():
+                for filename in self.filter_rules.split(","):
+                    vf_file = "".join([location, filename])
+
+                    qs = Store.objects.filter(pootle_path=vf_file)
+
+                    if qs.exists():
+                        self.units.add(*qs[0].units.all())
 
     @classmethod
     def get_applicable_for(cls, pootle_path):
@@ -168,6 +192,31 @@ class VirtualFolder(models.Model):
                     break
 
         return matching
+
+    def get_all_pootle_paths(self):
+        """Return a list with all the locations this virtual folder applies.
+
+        If the virtual folder location has no {LANG} nor {PROJ} placeholders
+        then the list only contains its location. If any of the placeholders is
+        present, then they get expanded to match all the existing languages and
+        projects.
+        """
+        if "{LANG}" in self.location and "{PROJ}" in self.location:
+            locations = []
+            temp = ""
+            for lang in Language.objects.all():
+                temp = self.location.replace("{LANG}", lang.code)
+                for proj in Project.objects.all():
+                    locations.append(temp.replace("{PROJ}", proj.code))
+            return locations
+        elif "{LANG}" in self.location:
+            return [self.location.replace("{LANG}", lang.code)
+                    for lang in Language.objects.all()]
+        elif "{PROJ}" in self.location:
+            return [self.location.replace("{PROJ}", proj.code)
+                    for proj in Project.objects.all()]
+
+        return [self.location]
 
     def get_adjusted_location(self, pootle_path):
         """Return the virtual folder location adjusted to the given path.
